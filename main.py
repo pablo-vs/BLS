@@ -1,3 +1,4 @@
+#Import curves elements
 from curve import (
     curve_order,
     G1,
@@ -12,9 +13,10 @@ import random
 import base64
 from hashlib import sha256
 
-
+#File where user's public keys are stored. It works similar to a DB.
 storagePubKeyFile = r"allPublicKeys.txt"
 
+#Options for the menu
 def menuText():
   print("1 -> Crear un par de firmas")
   print("2 -> Firmar un documento")
@@ -27,45 +29,49 @@ def menuText():
       opt = -1
   return opt
 
+#Adds a new user and its public key to the system DB
 def addUserPub(name, pubKey):
   fo = open(storagePubKeyFile, "a")
-
   fo.write(name + " " + pubKey + "\n")
-
   fo.close()
 
+#Returns True if user's name is in the DB. False if not.
 def isUser(name):
      fo = open(storagePubKeyFile, "r")
      ret = True
      if name not in fo.read():
        ret = False
-
      fo.close()
      return ret
 
-
 # Functions to encode and decode data to base64
-# Improves readability
+# Improves readability of the files
 
+#Returns the public key encoded in base64
 def encodePubKey(pk):
-    # TODO point compression
+    # TODO point compression: the coded version could be shorter 
+    #Instead of storing both x and y, it could be stored just x and then calculate y from the curve equation
     x, y = pk
     return base64.b64encode(x.val.to_bytes(48, byteorder='little')
             + y.val.to_bytes(48, byteorder='little'))
 
+#Returns the public key decoded from base64
 def decodePubKey(pkStr):
     byte = base64.b64decode(pkStr)
     x = FQ(int.from_bytes(byte[:48], byteorder='little'))
     y = FQ(int.from_bytes(byte[48:], byteorder='little'))
     return BaseCurve(x,y)
 
+#Returns the private key encoded in base64
 def encodePrivKey(sk):
     return base64.b64encode(sk.to_bytes(32, byteorder='little'))
 
+#Returns the private key decoded from base64
 def decodePrivKey(skStr):
     return int.from_bytes(base64.b64decode(skStr), byteorder='little')
 
-def encodeSig(sig):
+#Returns the signature encoded in base64
+def encodeSignature(sig):
     x, y = sig
     x0, x1 = x.val[0].val, x.val[1].val
     y0, y1 = y.val[0].val, y.val[1].val
@@ -74,7 +80,8 @@ def encodeSig(sig):
             + y0.to_bytes(48, byteorder='little')
             + y1.to_bytes(48, byteorder='little'))
 
-def decodeSig(sigStr):
+#Returns the signature decoded from base64
+def decodeSignature(sigStr):
     byte = base64.b64decode(sigStr)
     x0 = int.from_bytes(byte[:48], byteorder='little')
     x1 = int.from_bytes(byte[48:96], byteorder='little')
@@ -84,16 +91,17 @@ def decodeSig(sigStr):
     y = FQ2([y0, y1])
     return ExtCurve(x,y)
 
-
+#Represents a message as a point which belongs to the eliptic curve
+#Simplified version to make it work quicker
 def hashToPoint(message):
     # TODO secure hashing function
     hint = int.from_bytes(sha256(message).digest(), byteorder='little')
     h = hint % curve_order
     return G2 * h
 
+#It generates both public and private keys and storage the public key on the DB
+#Returns True on success and the two keys
 def keyGenerator(name):
-  
-
   sk = random.randint(0, curve_order)
   pk = G1 * sk
   
@@ -113,7 +121,8 @@ def keyGenerator(name):
 
   return (True, pubKeyPath, privKeyPath)
 
-
+#Generates a signature of a file
+#Returns True on success and the signature file path
 def signFile(filePath, privKey):
   with open(filePath, 'rb') as f:
       message = f.read()
@@ -124,11 +133,12 @@ def signFile(filePath, privKey):
   signatureFilePath = filePath+".sig"
 
   with open(signatureFilePath, "wb") as f:
-      f.write(encodeSig(signature))
+      f.write(encodeSignature(signature))
 
   return (True, signatureFilePath)
 
-
+#Checks the signature of a file
+#Returns True if the signature is valid
 def verifySignature(filePath, signatureFilePath, pubKey):
   with open(filePath, 'rb') as f:
       message = f.read()
@@ -136,18 +146,12 @@ def verifySignature(filePath, signatureFilePath, pubKey):
   H = hashToPoint(message)
 
   with open(signatureFilePath, "rb") as f:
-      signature = decodeSig(f.read())
-
-  #print(signature)
-  #print(H)
-  #print(pubKey)
+      signature = decodeSignature(f.read())
   p1 = pairing(pubKey, H)
   p2 = pairing(G1, signature)
-  #print(p1)
-  #print(p2)
   return p1 == p2
 
-
+#Processes the input/output when generating keys
 def auxKeyGenerator():
     name = input("Escriba su nombre: ")
     if isUser(name):
@@ -161,9 +165,9 @@ def auxKeyGenerator():
       print("Su clave privada se aloja en: " + myTuple[2])
     else:
       print("Ha habido un error generando las claves, vuelva a intentarlo.")
-    
-def auxSignFile():
 
+#Processes the input/output when signing a file
+def auxSignFile():
   privKeyPath = input("Escriba la ruta del fichero donde está su clave privada: ")
   filePath = input("Escriba la ruta del fichero que quiere firmar: ")
 
@@ -171,24 +175,20 @@ def auxSignFile():
   privKey = decodePrivKey(fo.read())
   fo.close()
 
-  #Se pasa la ruta del fichero a firmar y la clave privada
-  #Devuelve true/false y el path al documento firmado
-  myTuple = signFile(filePath, privKey)
-  
+  myTuple = signFile(filePath, privKey)  
   if myTuple[0]:
     print("El documento firmado se encuentra en: " + myTuple[1])
   else: 
     print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
 
-
+#Processes the input/output when verifying a signature
 def auxVerifySignature():
   print("Escoja una opción: ")
   print(" a. Si el firmante es usuario del sistema, escriba su nombre.")
   print(" b. Si no, escriba la ruta donde se almacena su clave pública.")
   opt = input()
 
-  pubKey = None
-    
+  pubKey = None    
   if opt == "a":
     name = input("Escriba su nombre: ")
     if isUser(name):
@@ -242,27 +242,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-"""
-
-BLS12_381_FQ2(x=1106624301960789946748158909871646598348904190322609219168378608841911
-898492216282408390352467793829034273514879159u + 1649077438388732385859817655088667066
-245504782517249547359861252662675631490090511138983125185251955676080881775131, y=3110
-81991676779127471721509924076726996932356427740459944270153530893013507119419478228535
-0976196626206342470238723u + 126782964418323818073621591837174637495231035899753538620
-0927214907051033380472497364373776011207985516687964055162)
-BLS12_381_FQ2(x=3463031491276111053437551085715438993401815136204614267126783225805721
-208029984986011411886489382368275818805965886u + 2247212123674941974215108907514019192
-503264191178610072130191523851478075383835910648860198776893009435174021599307, y=5460
-25818131574661406183621952818227207105997402797858208313381207764114675151023623791919
-540747917636939971076970u + 1757145574596997458599070055464714925152652800747649673165
-91478496834057574687082396559401291262307359029450538477)
-BLS12_381_FQ(x=50532783350983116249148232828292763881353770160137954180130858136804971
-1085959338414568906374117041523196126495913, y=984810398263711076044249951760876454249
-073578842065543413124405779036630624916572541688343954209521432468067795003)
-
-
--7141337075487289341
-"""
