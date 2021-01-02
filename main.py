@@ -10,7 +10,7 @@ from curve import (
 )
 import random
 import base64
-
+from hashlib import sha256
 
 
 storagePubKeyFile = r"allPublicKeys.txt"
@@ -20,8 +20,11 @@ def menuText():
   print("2 -> Firmar un documento")
   print("3 -> Comprobar la firma de un documento")
   print("4 -> Salir")
-  opt = input("Introduzca la opción:")
-  opt = int(opt)
+  opt = input("Introduzca la opción: ")
+  try:
+    opt = int(opt)
+  except ValueError as e:
+      opt = -1
   return opt
 
 def addUserPub(name, pubKey):
@@ -47,32 +50,32 @@ def isUser(name):
 def encodePubKey(pk):
     # TODO point compression
     x, y = pk
-    return base64.encodebytes(x.val.to_bytes(48, byteorder='little')
+    return base64.b64encode(x.val.to_bytes(48, byteorder='little')
             + y.val.to_bytes(48, byteorder='little'))
 
 def decodePubKey(pkStr):
-    byte = base64.decodebytes(pkStr)
+    byte = base64.b64decode(pkStr)
     x = FQ(int.from_bytes(byte[:48], byteorder='little'))
     y = FQ(int.from_bytes(byte[48:], byteorder='little'))
     return BaseCurve(x,y)
 
 def encodePrivKey(sk):
-    return base64.encodebytes(sk.to_bytes(32, byteorder='little'))
+    return base64.b64encode(sk.to_bytes(32, byteorder='little'))
 
 def decodePrivKey(skStr):
-    return int.from_bytes(base64.decodebytes(skStr), byteorder='little')
+    return int.from_bytes(base64.b64decode(skStr), byteorder='little')
 
 def encodeSig(sig):
     x, y = sig
     x0, x1 = x.val[0].val, x.val[1].val
     y0, y1 = y.val[0].val, y.val[1].val
-    return base64.encodebytes(x0.to_bytes(48, byteorder='little')
+    return base64.b64encode(x0.to_bytes(48, byteorder='little')
             + x1.to_bytes(48, byteorder='little')
             + y0.to_bytes(48, byteorder='little')
             + y1.to_bytes(48, byteorder='little'))
 
 def decodeSig(sigStr):
-    byte = base64.decodebytes(sigStr)
+    byte = base64.b64decode(sigStr)
     x0 = int.from_bytes(byte[:48], byteorder='little')
     x1 = int.from_bytes(byte[48:96], byteorder='little')
     y0 = int.from_bytes(byte[96:144], byteorder='little')
@@ -84,10 +87,13 @@ def decodeSig(sigStr):
 
 def hashToPoint(message):
     # TODO secure hashing function
-    h = hash(message) % curve_order
+    hint = int.from_bytes(sha256(message).digest(), byteorder='little')
+    h = hint % curve_order
     return G2 * h
 
 def keyGenerator(name):
+  
+
   sk = random.randint(0, curve_order)
   pk = G1 * sk
   
@@ -98,7 +104,12 @@ def keyGenerator(name):
   pubKeyPath = f"{name}_pubkey.txt"
   with open(pubKeyPath, "wb") as f:
       f.write(encodePubKey(pk))
-      print(encodePubKey(pk))
+
+  with open(storagePubKeyFile, "a+") as f:
+      f.write(name)
+      f.write(' ')
+      f.write(encodePubKey(pk).decode("utf-8"))
+      f.write('\n')
 
   return (True, pubKeyPath, privKeyPath)
 
@@ -127,11 +138,18 @@ def verifySignature(filePath, signatureFilePath, pubKey):
   with open(signatureFilePath, "rb") as f:
       signature = decodeSig(f.read())
 
-  return pairing(pubKey, H) == pairing(G1, signature)
+  #print(signature)
+  #print(H)
+  #print(pubKey)
+  p1 = pairing(pubKey, H)
+  p2 = pairing(G1, signature)
+  #print(p1)
+  #print(p2)
+  return p1 == p2
 
 
 def auxKeyGenerator():
-    name = input("Escriba su nombre:")
+    name = input("Escriba su nombre: ")
     if isUser(name):
       print("Este usuario ya tiene su par de claves")
       return
@@ -165,18 +183,20 @@ def auxSignFile():
 
 def auxVerifySignature():
   print("Escoja una opción: ")
-  print(" a. Si es usuario del sistema, escriba su nombre")
+  print(" a. Si es usuario del sistema, escriba su nombre.")
   print(" b. Si no, escriba la ruta donde se almacena su clave pública.")
   opt = input()
 
+  pubKey = None
+    
   if opt == "a":
-    name = input("Escriba su nombre:")
+    name = input("Escriba su nombre: ")
     if isUser(name):
-      fo = open(storagePubKeyFile, "rb")
+      fo = open(storagePubKeyFile, "r")
       for line in fo:
         line = line.split()
         if line[0] == name:
-          pubKey = decodePubKey(line[1])
+          pubKey = decodePubKey(line[1].encode("utf-8"))
           break
       
     else:
@@ -193,8 +213,8 @@ def auxVerifySignature():
     print("Opción no válida.")
     return
 
-  signatureFilePath = input("Escriba la ruta de la firma a verificar:")
-  filePath = input("Escriba la ruta del documento firmado:")
+  signatureFilePath = input("Escriba la ruta de la firma a verificar: ")
+  filePath = input("Escriba la ruta del documento firmado: ")
 
   if verifySignature(filePath, signatureFilePath, pubKey):
     print("La firma es correcta.")
@@ -203,7 +223,7 @@ def auxVerifySignature():
 
 
 def main():
-  print("Bienvenido al trabajo de CTC sobre curvas elípticas BLS. Se puede:")
+  print("Bienvenido al trabajo de CTC sobre curvas elípticas BLS. Se puede: ")
   while 1:
     opt = menuText()
   
@@ -222,3 +242,27 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+"""
+
+BLS12_381_FQ2(x=1106624301960789946748158909871646598348904190322609219168378608841911
+898492216282408390352467793829034273514879159u + 1649077438388732385859817655088667066
+245504782517249547359861252662675631490090511138983125185251955676080881775131, y=3110
+81991676779127471721509924076726996932356427740459944270153530893013507119419478228535
+0976196626206342470238723u + 126782964418323818073621591837174637495231035899753538620
+0927214907051033380472497364373776011207985516687964055162)
+BLS12_381_FQ2(x=3463031491276111053437551085715438993401815136204614267126783225805721
+208029984986011411886489382368275818805965886u + 2247212123674941974215108907514019192
+503264191178610072130191523851478075383835910648860198776893009435174021599307, y=5460
+25818131574661406183621952818227207105997402797858208313381207764114675151023623791919
+540747917636939971076970u + 1757145574596997458599070055464714925152652800747649673165
+91478496834057574687082396559401291262307359029450538477)
+BLS12_381_FQ(x=50532783350983116249148232828292763881353770160137954180130858136804971
+1085959338414568906374117041523196126495913, y=984810398263711076044249951760876454249
+073578842065543413124405779036630624916572541688343954209521432468067795003)
+
+
+-7141337075487289341
+"""
