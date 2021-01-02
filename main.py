@@ -1,4 +1,5 @@
 storagePubKeyFile = r"C:\Users\Andrea\Desktop\CurvasElipticasBLS\...\allPublicKeys.txt"
+
 def menuText():
   print("1 -> Crear un par de firmas")
   print("2 -> Firmar un documento")
@@ -23,7 +24,7 @@ def isUser(name):
 
      fo.close()
      return ret
-     
+####TODO    
 
 def keyGenerator(name):
   print("Pablo")
@@ -34,7 +35,7 @@ def signFile():
 
 def verifySignature(filePath, signatureFilePath, pubKey):
   return True
-
+####TODO
 def auxKeyGenerator():
     name = input("Escriba su nombre:")
     if isUser(name):
@@ -52,22 +53,20 @@ def auxKeyGenerator():
 def auxSignFile():
 
   privKeyPath = input("Escriba la ruta del fichero donde está su clave privada: ")
-  filePath = input("Escriba la ruta del fichero que quiere firmar:")
+  filePath = input("Escriba la ruta del fichero que quiere firmar: ")
 
   fo = open(privKeyPath, "r")
   privKey = fo.read()
   fo.close()
 
   #Se pasa la ruta del fichero a firmar y la clave privada
+  #Devuelve true/false y el path al documento firmado
   myTuple = signFile(filePath, privKey)
   
   if myTuple[0]:
     print("El documento firmado se encuentra en: " + myTuple[1])
   else: 
     print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
-
-
-
 
 
 def auxVerifySignature():
@@ -106,7 +105,6 @@ def auxVerifySignature():
     print("La firma es correcta.")
   else: 
     print("La firma no es correcta.")
-#Y si hay un error que hago?
 
 
 def main():
