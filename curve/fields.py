@@ -38,6 +38,9 @@ class FQVal(Protocol[T]):
     def __repr__(self: T) -> str: ...
 
 
+def isVal(e):
+    return isinstance(e, int) or isinstance(e, Polynomial)
+
 
 FQOrVal = Union[T_FQ, FQVal]
 
@@ -214,33 +217,34 @@ class FQ():
 
 
     def __add__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        #ot = other if isVal(other) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(self.val + ot)
 
     def __radd__(self: T_FQ, other: FQOrVal) -> T_FQ:
         return self + other
 
     def __mul__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(self.val * ot)
 
     def __rmul__(self: T_FQ, other: FQOrVal) -> T_FQ:
         return self * other
 
     def __sub__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(self.val - ot)
 
     def __rsub__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(ot - self.val)
 
     def __truediv__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(self.val * mod_inv(ot, self.modulus))
 
     def __rtruediv__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return type(self)(mod_inv(self.val, self.modulus) * ot)
 
     def inv(self: T_FQ) -> T_FQ:
@@ -254,11 +258,11 @@ class FQ():
 
 
     def __eq__(self: T_FQ, other: FQOrVal) -> bool:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return self.val == ot
 
     def __lt__(self: T_FQ, other: FQOrVal) -> bool:
-        ot = other if isinstance(other, FQVal) else other.val
+        ot = other if isVal(other) else other.val
         return self.val < ot
 
     def __hash__(self: T_FQ) -> int:
@@ -379,13 +383,14 @@ def fast_exponentiation(a: FQOrVal, n: int):
         Computes a^n in O(log(n)) time
     """
 
-    res = type(a)(1)
+    res = 1
     acc = a
     while n > 0:
         if n % 2 == 1:
             res *= acc
         n //= 2
-        acc = acc*acc
+        if n > 0:
+            acc = acc*acc
 
     return res
 
