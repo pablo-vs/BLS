@@ -183,7 +183,7 @@ def auxSignFile():
 
 def auxVerifySignature():
   print("Escoja una opción: ")
-  print(" a. Si es usuario del sistema, escriba su nombre.")
+  print(" a. Si el firmante es usuario del sistema, escriba su nombre.")
   print(" b. Si no, escriba la ruta donde se almacena su clave pública.")
   opt = input()
 
