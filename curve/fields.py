@@ -113,8 +113,7 @@ class Polynomial(ABC, dict, FQVal):
             newp = type(self)()
             for i,v in self.items():
                 for j,w in other.items():
-                    if v * w != 0:
-                        newp[i + j] += v * w
+                    newp[i + j] += v * w
             return newp
         else:
             return type(self)({i: v * other for i,v in self.items()})
@@ -153,14 +152,7 @@ class Polynomial(ABC, dict, FQVal):
             return type(self)()
 
     def __pow__(self: T_Polynomial, other: FQVal) -> T_Polynomial:
-        if other == 0:
-            return type(self)(1)
-        elif other == 1:
-            return self
-        elif other % 2 == 0:
-            return (self*self) ** (other // 2)
-        else:
-            return ((self*self) ** int(other // 2)) * self
+        return fast_exponentiation(self, other)
 
     def __eq__(self: T_Polynomial, other: FQVal) -> bool:
         if isinstance(other, Polynomial):
@@ -257,14 +249,8 @@ class FQ():
     def __pow__(self: T_FQ, other: int) -> T_FQ:
         if other < 0:
             return self.inv() ** (-other)
-        if other == 0:
-            return type(self)(1)
-        elif other == 1:
-            return type(self)(self.val)
-        elif other % 2 == 0:
-            return (self*self) ** (other // 2)
         else:
-            return ((self*self) ** int(other // 2)) * self
+            return fast_exponentiation(self, other)
 
 
     def __eq__(self: T_FQ, other: FQOrVal) -> bool:
@@ -329,27 +315,34 @@ def polynomial_division(pol: Polynomial, div: Polynomial):
 
     if div == 0:
         raise ValueError("Can't divide polynomial by 0")
-    if pol == 0:
-        return tpol(0), tpol(0)
-    if pol.deg < div.deg:
-        return tpol(0), tpol(pol)
 
-    # Leading coefficients
-    lc1 = pol[pol.deg]
-    lc2 = div[div.deg]
+    quot = tpol()
+    rem = tpol(pol)
 
-    T_c = type(lc1)
+    lcdiv = div[div.deg]
+    T_c = type(lcdiv)
 
-    degdif = pol.deg - div.deg
+    while rem.deg >= div.deg:
 
-    quot = tpol({degdif: T_c(lc1 / lc2)})
-    rem = pol - quot*div
+        # Leading coefficient
+        lc = rem[rem.deg]
 
-    if not rem.deg < pol.deg:
+        degdif = rem.deg - div.deg
+
+        nquot = T_c(lc / lcdiv)
+
+        for i,v in list(div.items()):
+            rem[i+degdif] -= v*nquot
+
+        quot[degdif] += nquot
+
+   
+    if pol.deg >= div.deg and (not rem.deg < div.deg):
+        print(pol, div, quot, rem)
         raise ValueError("Attempted division with non-euclidean coefficients")
+
     
-    q,r = polynomial_division(rem, div)
-    return quot+q, r
+    return quot, rem
     
 
 
@@ -380,6 +373,21 @@ def is_unit(x: FQVal):
     else:
         return x.deg == 0 and x != 0
 
+
+def fast_exponentiation(a: FQOrVal, n: int):
+    """
+        Computes a^n in O(log(n)) time
+    """
+
+    res = type(a)(1)
+    acc = a
+    while n > 0:
+        if n % 2 == 1:
+            res *= acc
+        n //= 2
+        acc = acc*acc
+
+    return res
 
 def print_superscript(n: int):
     uni = [

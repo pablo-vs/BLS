@@ -1,4 +1,19 @@
-storagePubKeyFile = r"C:\Users\Andrea\Desktop\CurvasElipticasBLS\...\allPublicKeys.txt"
+from curve import
+    curve_order,
+    G1,
+    G2,
+    pairing,
+    FQ,
+    FQ2,
+    BLS12_381_FQ as BaseCurve,
+    BLS12_381_FQ2 as ExtCurve
+import random
+import base64
+
+
+
+storagePubKeyFile = r"allPublicKeys.txt"
+
 def menuText():
   print("1 -> Crear un par de firmas")
   print("2 -> Firmar un documento")
@@ -25,15 +40,89 @@ def isUser(name):
      return ret
      
 
-def keyGenerator(name):
-  print("Pablo")
-  return (True, "pubKeyPath", "privKeyPath")
+def encodePubKey(pk):
+    # TODO point compression
+    x, y = pk
+    return base64.encodebytes(x.val.to_bytes(48, byteorder='little')
+            + y.val.to_bytes(48, byteorder='little'))
 
-def signFile():
-  return (True, "signatureFilePath")
+def decodePubKey(pkStr):
+    byte = base64.decodebytes(pkStr)
+    x = FQ(int.frombytes(byte[:48], byteorder='little'))
+    y = FQ(int.frombytes(byte[48:], byteorder='little'))
+    return BaseCurve(x,y)
+
+def encodePrivKey(sk):
+    return base64.encodebytes(sk.to_bytes(32, byteorder='little'))
+
+def decodePrivKey(skStr):
+    return int.from_bytes(base64.decodebytes(skStr), byteorder='little'))
+
+def encodeSig(sig):
+    x, y = sig
+    x0, x1 = x.val[0], x.val[1]
+    y0, y1 = y.val[0], y.val[1]
+    return base64.encodebytes(x0.to_bytes(48, byteorder='little')
+            + x1.to_bytes(48, byteorder='little')
+            + y0.to_bytes(48, byteorder='little')
+            + y1.to_bytes(48, byteorder='little'))
+
+def decodeSig(sigStr):
+    byte = base64.decodebytes(sigStr)
+    x0 = int.frombytes(byte[:48], byteorder='little')
+    x1 = int.frombytes(byte[48:96], byteorder='little')
+    y0 = int.frombytes(byte[96:144], byteorder='little')
+    y1 = int.frombytes(byte[144:], byteorder='little')
+    x = FQ2([x0, x1])
+    y = FQ2([y0, y1])
+    return ExtCurve(x,y)
+
+
+def hashToPoint(message):
+    # TODO secure hashing function
+    h = hash(message) % curve_order
+    return G2 ** h
+
+def keyGenerator(name):
+  sk = random.randint(0, curve_order)
+  pk = G1 * sk
+  
+  privKeyPath = f"{name}_privkey.txt"
+  with open(privKeyPath, "w") as f:
+      f.write(encodePrivKey(sk))
+
+  pubKeyPath = f"{name}_pubkey.txt"
+  with open(pubKeyPath, "w") as f:
+      f.write(encodePubKey(pk))
+
+  return (True, pubKeyPath, privKeyPath)
+
+
+def signFile(filePath, privKey):
+  with open(filePath, 'rb') as f:
+      message = f.read()
+
+  H = hashToPoint(message)
+  signature = privKey * H
+    
+  signatureFilePath = filePath+".sig"
+
+  with open(signatureFilePath, "w") as f:
+      f.write(encodeSig(signature))
+
+  return (True, signatureFilePath)
+
 
 def verifySignature(filePath, signatureFilePath, pubKey):
-  return True
+  with open(filePath, 'rb') as f:
+      message = f.read()
+
+  H = hashToPoint(message)
+
+  with open(signatureFilePath, "r") as f:
+      signature = decodeSig(f.read())
+
+  return pairing(pubKey, H) == pairing(G1, signature)
 
 def auxKeyGenerator():
     name = input("Escriba su nombre:")

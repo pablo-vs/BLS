@@ -1,5 +1,5 @@
-from curve_fields import FQ, FQ2, FQ12
-from fields import T_FQ
+from curve.curve_fields import FQ, FQ2, FQ12
+from curve.fields import T_FQ
 from collections import namedtuple
 
 
@@ -13,12 +13,15 @@ class CurvePoint(Point):
 
 
     def __new__(cls, x = None, y = None):
+        if cls.a is None or cls.b is None:
+            raise AttributeError("Curve paremeters not set")
+        if x is not None and y is None:
+            raise NotImplementedError()
+            #y2 = type(x)(sqrt(x**3 + a*x + b))
         self = super(CurvePoint, cls).__new__(cls, x, y)
         return self
 
     def __init__(self, x = None, y = None) -> None:
-        if self.a is None or self.b is None:
-            raise AttributeError("Curve paremeters not set")
         if not self.is_on_curve():
             raise ValueError("Point is not in curve")
 
@@ -61,7 +64,7 @@ class CurvePoint(Point):
             return type(self)()
         elif other == 1:
             return self
-        elif other % 2 != 0:
+        elif other % 2 == 0:
             return self.double() * (other // 2)
         else:
             return self.double() * (other // 2) + self
@@ -83,6 +86,12 @@ class CurvePoint(Point):
         x, y = self
         return type(self)(x, -y)
 
+    def __eq__(self, other):
+        if self.is_infinite() or other.is_infinite():
+            return self.is_infinite() and other.is_infinite()
+        else:
+            return super().__eq__(other)
+
     #@abstractmethod
     def twist(self):
         raise NotImplementedError()
@@ -98,6 +107,8 @@ G1 = BLS12_381_FQ(
     FQ(3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507),
     FQ(1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569)
     )
+
+curve_order = 52435875175126190479447740508185965837690552500527637822603658699938581184513
 
 
 class BLS12_381_FQ12(CurvePoint):
