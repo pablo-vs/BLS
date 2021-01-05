@@ -36,7 +36,7 @@ def addUserPub(name, pubKey):
       fo.write(" " + name + " " + pubKey + "\n")
       fo.close()
   except FileNotFoundError:
-      print("No se ha encontrado el archivo")
+      print("Problema con la Base de Datos. Consulte al administrador.")
       return
 
 #Returns True if user's name is in the DB. False if not.
@@ -49,8 +49,9 @@ def isUser(name):
       fo.close()
       return ret
   except FileNotFoundError:
-      print("No se ha encontrado el archivo")
-      return
+      fo = open(storagePubKeyFile, "w")
+      fo.close()
+      return False
 
 # Functions to encode and decode data to base64
 # Improves readability of the files
@@ -171,16 +172,19 @@ def verifySignature(filePath, signatureFilePath, pubKey):
 #Processes the input/output when generating keys
 def auxKeyGenerator():
     name = input("Escriba su nombre: ")
-    if isUser(name):
+    isUserVar = isUser(name)
+    if isUserVar:
       print("Este usuario ya tiene su par de claves")
       return
-    elif False:
+    elif not isUserVar:
       myTuple = keyGenerator(name)    
       if myTuple[0]:
           print("Su clave pública se aloja en: " + myTuple[1])
           print("Su clave privada se aloja en: " + myTuple[2])
       else:
           print("Ha habido un error generando las claves, vuelva a intentarlo.")
+   
+	
 
 #Processes the input/output when signing a file
 def auxSignFile():
