@@ -219,7 +219,8 @@ def auxVerifySignature():
   pubKey = None    
   if opt == "a":
     name = input("Escriba su nombre: ")
-    if isUser(name):
+    isUserVar = isUser(name)
+    if isUserVar:
       fo = open(storagePubKeyFile, "r")
       for line in fo:
         line = line.split()
@@ -227,7 +228,7 @@ def auxVerifySignature():
           pubKey = decodePubKey(line[1].encode("utf-8"))
           break
       
-    elif False:
+    elif not isUserVar:
       print("Su usuario no existe.")
       return
   
@@ -248,7 +249,7 @@ def auxVerifySignature():
 
   signatureFilePath = input("Escriba la ruta de la FIRMA a verificar (el documento .sig): ")
   filePath = input("Escriba la ruta del DOCUMENTO original que se ha firmado: ")
-
+  print("Espere por favor, estamos tramitando su petición. Esto puede llevar tiempo")
   if verifySignature(filePath, signatureFilePath, pubKey):
     print("La firma es correcta.")
   elif False: 
