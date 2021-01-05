@@ -147,7 +147,8 @@ def signFile(filePath, privKey):
       signatureFilePath = filePath+".sig"
 
       with open(signatureFilePath, "wb") as f:
-	  f.write(encodeSignature(signature))
+          f.write(encodeSignature(signature))
+	  
 
       return (True, signatureFilePath)
 
