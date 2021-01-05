@@ -196,16 +196,18 @@ def auxKeyGenerator():
 def auxSignFile():
   privKeyPath = input("Escriba la ruta del fichero donde está su clave privada: ")
   filePath = input("Escriba la ruta del fichero que quiere firmar: ")
+  try:
+    fo = open(privKeyPath, "rb")
+    privKey = decodePrivKey(fo.read())
+    fo.close()
 
-  fo = open(privKeyPath, "rb")
-  privKey = decodePrivKey(fo.read())
-  fo.close()
-
-  myTuple = signFile(filePath, privKey)  
-  if myTuple[0]:
-    print("El documento firmado se encuentra en: " + myTuple[1])
-  else: 
-    print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
+    myTuple = signFile(filePath, privKey)  
+    if myTuple[0]:
+      print("El documento firmado se encuentra en: " + myTuple[1])
+    else: 
+      print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
+  except FileNotFoundError:
+    print("La ruta no se encuentra")
 
 #Processes the input/output when verifying a signature
 def auxVerifySignature():
