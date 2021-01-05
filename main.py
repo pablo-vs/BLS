@@ -32,14 +32,14 @@ def menuText():
 #Adds a new user and its public key to the system DB
 def addUserPub(name, pubKey):
   fo = open(storagePubKeyFile, "a")
-  fo.write(name + " " + pubKey + "\n")
+  fo.write(" " + name + " " + pubKey + "\n")
   fo.close()
 
 #Returns True if user's name is in the DB. False if not.
 def isUser(name):
      fo = open(storagePubKeyFile, "r")
      ret = True
-     if name not in fo.read():
+     if " "+name+" " not in fo.read():
        ret = False
      fo.close()
      return ret
@@ -114,8 +114,7 @@ def keyGenerator(name):
       f.write(encodePubKey(pk))
 
   with open(storagePubKeyFile, "a+") as f:
-      f.write(name)
-      f.write(' ')
+      f.write(" " + name + " ")
       f.write(encodePubKey(pk).decode("utf-8"))
       f.write('\n')
 
