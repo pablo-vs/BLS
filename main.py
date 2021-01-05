@@ -114,40 +114,45 @@ def keyGenerator(name):
   sk = random.randint(0, curve_order)
   pk = G1 * sk  
   privKeyPath = f"{name}_privkey.txt"
+  pubKeyPath = f"{name}_pubkey.txt"
+	
   try:
       with open(privKeyPath, "wb") as f:
           f.write(encodePrivKey(sk))
           f.close
 
-      pubKeyPath = f"{name}_pubkey.txt"
       with open(pubKeyPath, "wb") as f:
           f.write(encodePubKey(pk))
           f.close
 
       with open(storagePubKeyFile, "a+") as f:
-          f.write(" " + name + " ")
-          f.write(encodePubKey(pk).decode("utf-8"))
-          f.write('\n')
+          f.write(" " + name + " " + encodePubKey(pk).decode("utf-8") + '\n')
           f.close
+	
       return (True, pubKeyPath, privKeyPath)
+
   except FileNotFoundError:
       print("Ha habido un error generando los archivos que contienen las claves. Vuelva a intentarlo.")
 
 #Generates a signature of a file
 #Returns True on success and the signature file path
 def signFile(filePath, privKey):
-  with open(filePath, 'rb') as f:
-      message = f.read()
+  try:
+      with open(filePath, 'rb') as f:
+          message = f.read()
 
-  H = hashToPoint(message)
-  signature = privKey * H
-    
-  signatureFilePath = filePath+".sig"
+      H = hashToPoint(message)
+      signature = privKey * H
 
-  with open(signatureFilePath, "wb") as f:
-      f.write(encodeSignature(signature))
+      signatureFilePath = filePath+".sig"
 
-  return (True, signatureFilePath)
+      with open(signatureFilePath, "wb") as f:
+	  f.write(encodeSignature(signature))
+
+      return (True, signatureFilePath)
+
+  except FileNotFoundError:
+      return (False, "")
 
 #Checks the signature of a file
 #Returns True if the signature is valid
@@ -156,14 +161,14 @@ def verifySignature(filePath, signatureFilePath, pubKey):
       with open(filePath, 'rb') as f:
           message = f.read()
 
-      H = hashToPoint(message)
-  
+      H = hashToPoint(message)  
 
       with open(signatureFilePath, "rb") as f:
           signature = decodeSignature(f.read())
       p1 = pairing(pubKey, H)
       p2 = pairing(G1, signature)
-      return p1 == p2	  
+      return p1 == p2	
+
   except FileNotFoundError:
       print("No se ha encontrado el archivo")
       return
@@ -225,9 +230,14 @@ def auxVerifySignature():
   
   elif opt == "b":
     pubKeyPath = input("Escriba la ruta donde se almacena la clave pública del firmante: ")
-    fo = open(pubKeyPath, "rb")
-    pubKey = decodePubKey(fo.read())
-    fo.close()
+    try:
+    	fo = open(pubKeyPath, "rb")
+    	pubKey = decodePubKey(fo.read())
+    	fo.close()
+
+    except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+      return
 
   else:
     print("Opción no válida.")
