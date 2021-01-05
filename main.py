@@ -139,16 +139,22 @@ def signFile(filePath, privKey):
 #Checks the signature of a file
 #Returns True if the signature is valid
 def verifySignature(filePath, signatureFilePath, pubKey):
-  with open(filePath, 'rb') as f:
-      message = f.read()
+  try:
+      with open(filePath, 'rb') as f:
+          message = f.read()
 
-  H = hashToPoint(message)
+      H = hashToPoint(message)
+  
 
-  with open(signatureFilePath, "rb") as f:
-      signature = decodeSignature(f.read())
-  p1 = pairing(pubKey, H)
-  p2 = pairing(G1, signature)
-  return p1 == p2
+      with open(signatureFilePath, "rb") as f:
+          signature = decodeSignature(f.read())
+      p1 = pairing(pubKey, H)
+      p2 = pairing(G1, signature)
+      return p1 == p2	  
+  except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+      return
+
 
 #Processes the input/output when generating keys
 def auxKeyGenerator():
@@ -203,7 +209,7 @@ def auxVerifySignature():
       return
   
   elif opt == "b":
-    pubKeyPath = input("Escriba la ruta donde se almacena su clave pública: ")
+    pubKeyPath = input("Escriba la ruta donde se almacena la clave pública del firmante: ")
     fo = open(pubKeyPath, "rb")
     pubKey = decodePubKey(fo.read())
     fo.close()
@@ -212,12 +218,12 @@ def auxVerifySignature():
     print("Opción no válida.")
     return
 
-  signatureFilePath = input("Escriba la ruta de la firma a verificar: ")
-  filePath = input("Escriba la ruta del documento firmado: ")
+  signatureFilePath = input("Escriba la ruta de la FIRMA a verificar (el documento .sig): ")
+  filePath = input("Escriba la ruta del DOCUMENTO original que se ha firmado: ")
 
   if verifySignature(filePath, signatureFilePath, pubKey):
     print("La firma es correcta.")
-  else: 
+  elif False: 
     print("La firma no es correcta.")
 
 
