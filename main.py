@@ -31,18 +31,26 @@ def menuText():
 
 #Adds a new user and its public key to the system DB
 def addUserPub(name, pubKey):
-  fo = open(storagePubKeyFile, "a")
-  fo.write(" " + name + " " + pubKey + "\n")
-  fo.close()
+  try:
+      fo = open(storagePubKeyFile, "a")
+      fo.write(" " + name + " " + pubKey + "\n")
+      fo.close()
+  except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+      return
 
 #Returns True if user's name is in the DB. False if not.
 def isUser(name):
-     fo = open(storagePubKeyFile, "r")
-     ret = True
-     if " "+name+" " not in fo.read():
-       ret = False
-     fo.close()
-     return ret
+  try:
+      fo = open(storagePubKeyFile, "r")
+      ret = True
+      if " "+name+" " not in fo.read():
+          ret = False
+      fo.close()
+      return ret
+  except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+      return
 
 # Functions to encode and decode data to base64
 # Improves readability of the files
@@ -103,22 +111,26 @@ def hashToPoint(message):
 #Returns True on success and the two keys
 def keyGenerator(name):
   sk = random.randint(0, curve_order)
-  pk = G1 * sk
-  
+  pk = G1 * sk  
   privKeyPath = f"{name}_privkey.txt"
-  with open(privKeyPath, "wb") as f:
-      f.write(encodePrivKey(sk))
+  try:
+      with open(privKeyPath, "wb") as f:
+          f.write(encodePrivKey(sk))
+          f.close
 
-  pubKeyPath = f"{name}_pubkey.txt"
-  with open(pubKeyPath, "wb") as f:
-      f.write(encodePubKey(pk))
+      pubKeyPath = f"{name}_pubkey.txt"
+      with open(pubKeyPath, "wb") as f:
+          f.write(encodePubKey(pk))
+          f.close
 
-  with open(storagePubKeyFile, "a+") as f:
-      f.write(" " + name + " ")
-      f.write(encodePubKey(pk).decode("utf-8"))
-      f.write('\n')
-
-  return (True, pubKeyPath, privKeyPath)
+      with open(storagePubKeyFile, "a+") as f:
+          f.write(" " + name + " ")
+          f.write(encodePubKey(pk).decode("utf-8"))
+          f.write('\n')
+          f.close
+      return (True, pubKeyPath, privKeyPath)
+  except FileNotFoundError:
+      print("Ha habido un error generando los archivos que contienen las claves. Vuelva a intentarlo.")
 
 #Generates a signature of a file
 #Returns True on success and the signature file path
@@ -162,14 +174,13 @@ def auxKeyGenerator():
     if isUser(name):
       print("Este usuario ya tiene su par de claves")
       return
-    else:
-      myTuple = keyGenerator(name)
-    
-    if myTuple[0]:
-      print("Su clave pública se aloja en: " + myTuple[1])
-      print("Su clave privada se aloja en: " + myTuple[2])
-    else:
-      print("Ha habido un error generando las claves, vuelva a intentarlo.")
+    elif False:
+      myTuple = keyGenerator(name)    
+      if myTuple[0]:
+          print("Su clave pública se aloja en: " + myTuple[1])
+          print("Su clave privada se aloja en: " + myTuple[2])
+      else:
+          print("Ha habido un error generando las claves, vuelva a intentarlo.")
 
 #Processes the input/output when signing a file
 def auxSignFile():
@@ -204,7 +215,7 @@ def auxVerifySignature():
           pubKey = decodePubKey(line[1].encode("utf-8"))
           break
       
-    else:
+    elif False:
       print("Su usuario no existe.")
       return
   
