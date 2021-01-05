@@ -225,7 +225,7 @@ def auxVerifySignature():
 def main():
   print("Bienvenido al trabajo de CTC sobre curvas elípticas BLS. Se puede: ")
   exit = False
-  while !exit:
+  while not exit:
     opt = menuText()
   
     while opt not in [1,2,3,4]:
