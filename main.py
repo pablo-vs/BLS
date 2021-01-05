@@ -224,21 +224,25 @@ def auxVerifySignature():
 
 def main():
   print("Bienvenido al trabajo de CTC sobre curvas elípticas BLS. Se puede: ")
-  while 1:
+  exit = False
+  while !exit:
     opt = menuText()
   
     while opt not in [1,2,3,4]:
-      print("Escoja una opción válida:")
+      print("Por favor, escoja una opción válida.")
       opt = menuText()
   
     if opt == 4:
-        return 0
+        exit = True
     elif opt == 1: #Crear firmas
       auxKeyGenerator()
     elif opt == 2: #Firmar doc
       auxSignFile()
     else: #check firma
       auxVerifySignature()
+    
+    if exit:
+        return 0
 
 if __name__ == "__main__":
     main()
