@@ -88,6 +88,9 @@ def encodePubKey(pk):
 def decodePubKey(pkStr):
     byte = base64.b64decode(pkStr)
 
+    if len(byte) < 1:
+        raise ValueError("It seems like your public key file is corrupted")
+
     metadata = byte[0]
     if is_inf(metadata):
         return BaseCurve()
@@ -122,10 +125,11 @@ def encodePrivKey(sk):
 
 #Returns the private key decoded from base64
 def decodePrivKey(skStr):
-    skStr = skStr.strip(b' \n')
-    if len(skStr) > 4*ceil(PRIVKEY_SIZE/3):
+    byte = base64.b64decode(skStr) 
+    if len(byte) != PRIVKEY_SIZE:
         raise ValueError("It seems like your private key file is corrupted.")
-    res = int.from_bytes(base64.b64decode(skStr), byteorder=ENDIANNESS)
+
+    res = int.from_bytes(byte, byteorder=ENDIANNESS)
     if res < 0 or res > curve_order:
         raise ValueError("It seems like your private key file is corrupted.")
     return res
@@ -173,6 +177,9 @@ def encodeSignature(sig):
 #Returns the signature decoded from base64
 def decodeSignature(sigStr):
     byte = base64.b64decode(sigStr)
+
+    if len(byte) < 1:
+        raise ValueError("It seems like the signature file is corrupted")
 
     metadata = byte[0]
     if is_inf(metadata):
