@@ -12,6 +12,7 @@ from curve import (
 import random
 import base64
 from hashlib import sha256
+from math import ceil
 
 
 
@@ -73,7 +74,8 @@ def encodePubKey(pk):
 
 #Returns the public key decoded from base64
 def decodePubKey(pkStr):
-    if len(pkStr) > PUBKEY_SIZE:
+    pkStr = pkStr.strip(b' \n')
+    if len(pkStr) > 4*PUBKEY_SIZE/3:
         raise ValueError("It seems like your public key file is corrupted")
     byte = base64.b64decode(pkStr)
     x = FQ(int.from_bytes(byte[:FQ_SIZE], byteorder='little'))
@@ -90,7 +92,8 @@ def encodePrivKey(sk):
 
 #Returns the private key decoded from base64
 def decodePrivKey(skStr):
-    if len(skStr) > PRIVKEY_SIZE:
+    skStr = skStr.strip(b' \n')
+    if len(skStr) > 4*ceil(PRIVKEY_SIZE/3):
         raise ValueError("It seems like your private key file is corrupted.")
     res = int.from_bytes(base64.b64decode(skStr), byteorder='little')
     if res < 0 or res > curve_order:
@@ -110,7 +113,8 @@ def encodeSignature(sig):
 
 #Returns the signature decoded from base64
 def decodeSignature(sigStr):
-    if len(sigStr) > SIGNATURE_SIZE:
+    sigStr = sigStr.strip(b' \n')
+    if len(sigStr) > 4*SIGNATURE_SIZE/3:
         raise ValueError("It seems like the signature file is corrupted")
 
     byte = base64.b64decode(sigStr)
@@ -201,6 +205,8 @@ def verifySignature(filePath, signatureFilePath, pubKey):
   except ValueError:
       print("Archivo dañado o incorrecto")
 
+  return None
+
 
 #Processes the input/output when generating keys
 def auxKeyGenerator():
@@ -273,6 +279,7 @@ def auxVerifySignature():
       return
     except ValueError:
       print("Archivo dañado o incorrecto")
+      return
 
   else:
     print("Opción no válida.")
@@ -281,10 +288,13 @@ def auxVerifySignature():
   signatureFilePath = input("Escriba la ruta de la FIRMA a verificar (el documento .sig): ")
   filePath = input("Escriba la ruta del DOCUMENTO original que se ha firmado: ")
   print("Espere por favor, estamos tramitando su petición. Esto puede llevar tiempo")
-  if verifySignature(filePath, signatureFilePath, pubKey):
+  res = verifySignature(filePath, signatureFilePath, pubKey)
+  if res:
     print("La firma es correcta.")
-  elif False: 
+  elif res == False: 
     print("La firma no es correcta.")
+  elif res is None:
+    print("No se ha podido verificar la firma")
 
 
 def main():
