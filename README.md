@@ -1,3 +1,3 @@
 # CurvasElipticasBLS
-In main file, you must change the value of storagePubKeyFile.
-Por favoh, necesito control de errores
+In main file, you might change the value of storagePubKeyFile.
+
