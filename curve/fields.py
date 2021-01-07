@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Union, TypeVar
-from collections.abc import Sequence, Mapping
+from typing import Union, TypeVar, Sequence, Mapping
+#from collections.abc import Sequence, Mapping
 from typing_extensions import Protocol, runtime_checkable
 from functools import total_ordering
 
@@ -299,7 +299,7 @@ def FQFac(mod):
 
 
     @classmethod
-    def extend(cls, coefs: Union[Sequence[FQ], Mapping[FQ]], var = None):
+    def extend(cls, coefs: Union[Sequence[FQ], Mapping[int, FQ]], var = None):
         if var is not None:
             pol = Polynomials(cls, var)(coefs)
         else:
