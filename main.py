@@ -1,3 +1,4 @@
+#Import curves elements
 from curve import (
     curve_order,
     G1,
@@ -13,8 +14,16 @@ import base64
 from hashlib import sha256
 
 
+
+PRIVKEY_SIZE = 32
+FQ_SIZE = 48
+PUBKEY_SIZE = 2*FQ_SIZE
+SIGNATURE_SIZE = 4*FQ_SIZE
+
+#File where user's public keys are stored. It works similar to a DB.
 storagePubKeyFile = r"allPublicKeys.txt"
 
+#Options for the menu
 def menuText():
   print("1 -> Crear un par de firmas")
   print("2 -> Firmar un documento")
@@ -27,171 +36,220 @@ def menuText():
       opt = -1
   return opt
 
+#Adds a new user and its public key to the system DB
 def addUserPub(name, pubKey):
-  fo = open(storagePubKeyFile, "a")
+  try:
+      fo = open(storagePubKeyFile, "a")
+      fo.write(" " + name + " " + pubKey + "\n")
+      fo.close()
+  except FileNotFoundError:
+      print("Problema con la Base de Datos. Consulte al administrador.")
+      return
 
-  fo.write(name + " " + pubKey + "\n")
-
-  fo.close()
-
+#Returns True if user's name is in the DB. False if not.
 def isUser(name):
-     fo = open(storagePubKeyFile, "r")
-     ret = True
-     if name not in fo.read():
-       ret = False
-
-     fo.close()
-     return ret
-
+  try:
+      fo = open(storagePubKeyFile, "r")
+      ret = True
+      if " "+name+" " not in fo.read():
+          ret = False
+      fo.close()
+      return ret
+  except FileNotFoundError:
+      fo = open(storagePubKeyFile, "w")
+      fo.close()
+      return False
 
 # Functions to encode and decode data to base64
-# Improves readability
+# Improves readability of the files
 
+#Returns the public key encoded in base64
 def encodePubKey(pk):
-    # TODO point compression
+    # TODO point compression: the coded version could be shorter 
+    #Instead of storing both x and y, it could be stored just x and then calculate y from the curve equation
     x, y = pk
-    return base64.b64encode(x.val.to_bytes(48, byteorder='little')
-            + y.val.to_bytes(48, byteorder='little'))
+    return base64.b64encode(x.val.to_bytes(FQ_SIZE, byteorder='little')
+            + y.val.to_bytes(FQ_SIZE, byteorder='little'))
 
+#Returns the public key decoded from base64
 def decodePubKey(pkStr):
+    if len(pkStr) > PUBKEY_SIZE:
+        raise ValueError("It seems like your public key file is corrupted")
     byte = base64.b64decode(pkStr)
-    x = FQ(int.from_bytes(byte[:48], byteorder='little'))
-    y = FQ(int.from_bytes(byte[48:], byteorder='little'))
-    return BaseCurve(x,y)
+    x = FQ(int.from_bytes(byte[:FQ_SIZE], byteorder='little'))
+    y = FQ(int.from_bytes(byte[FQ_SIZE:], byteorder='little'))
+    try:
+        return BaseCurve(x,y)
+    except ValueError as e:
+        raise ValueError("It seems your public key file is corrupted:,", e)
 
+
+#Returns the private key encoded in base64
 def encodePrivKey(sk):
-    return base64.b64encode(sk.to_bytes(32, byteorder='little'))
+    return base64.b64encode(sk.to_bytes(PRIVKEY_SIZE, byteorder='little'))
 
+#Returns the private key decoded from base64
 def decodePrivKey(skStr):
-    return int.from_bytes(base64.b64decode(skStr), byteorder='little')
+    if len(skStr) > PRIVKEY_SIZE:
+        raise ValueError("It seems like your private key file is corrupted.")
+    res = int.from_bytes(base64.b64decode(skStr), byteorder='little')
+    if res < 0 or res > curve_order:
+        raise ValueError("It seems like your private key file is corrupted.")
+    return res
+    
 
-def encodeSig(sig):
+#Returns the signature encoded in base64
+def encodeSignature(sig):
     x, y = sig
     x0, x1 = x.val[0].val, x.val[1].val
     y0, y1 = y.val[0].val, y.val[1].val
-    return base64.b64encode(x0.to_bytes(48, byteorder='little')
-            + x1.to_bytes(48, byteorder='little')
-            + y0.to_bytes(48, byteorder='little')
-            + y1.to_bytes(48, byteorder='little'))
+    return base64.b64encode(x0.to_bytes(FQ_SIZE, byteorder='little')
+            + x1.to_bytes(FQ_SIZE, byteorder='little')
+            + y0.to_bytes(FQ_SIZE, byteorder='little')
+            + y1.to_bytes(FQ_SIZE, byteorder='little'))
 
-def decodeSig(sigStr):
+#Returns the signature decoded from base64
+def decodeSignature(sigStr):
+    if len(sigStr) > SIGNATURE_SIZE:
+        raise ValueError("It seems like the signature file is corrupted")
+
     byte = base64.b64decode(sigStr)
-    x0 = int.from_bytes(byte[:48], byteorder='little')
-    x1 = int.from_bytes(byte[48:96], byteorder='little')
-    y0 = int.from_bytes(byte[96:144], byteorder='little')
-    y1 = int.from_bytes(byte[144:], byteorder='little')
+    x0 = int.from_bytes(byte[:FQ_SIZE], byteorder='little')
+    x1 = int.from_bytes(byte[FQ_SIZE:2*FQ_SIZE], byteorder='little')
+    y0 = int.from_bytes(byte[2*FQ_SIZE:3*FQ_SIZE], byteorder='little')
+    y1 = int.from_bytes(byte[3*FQ_SIZE:], byteorder='little')
     x = FQ2([x0, x1])
     y = FQ2([y0, y1])
-    return ExtCurve(x,y)
+    try:
+        return ExtCurve(x,y)
+    except ValueError as e:
+        raise ValueError("It seems like the signature file is corrupted:,", e)
 
-
+#Represents a message as a point which belongs to the eliptic curve
+#Simplified version to make it work quicker
 def hashToPoint(message):
     # TODO secure hashing function
     hint = int.from_bytes(sha256(message).digest(), byteorder='little')
     h = hint % curve_order
     return G2 * h
 
+#It generates both public and private keys and storage the public key on the DB
+#Returns True on success and the two keys
 def keyGenerator(name):
-  
-
   sk = random.randint(0, curve_order)
-  pk = G1 * sk
-  
+  pk = G1 * sk  
   privKeyPath = f"{name}_privkey.txt"
-  with open(privKeyPath, "wb") as f:
-      f.write(encodePrivKey(sk))
-
   pubKeyPath = f"{name}_pubkey.txt"
-  with open(pubKeyPath, "wb") as f:
-      f.write(encodePubKey(pk))
+	
+  try:
+      with open(privKeyPath, "wb") as f:
+          f.write(encodePrivKey(sk))
+          f.close
 
-  with open(storagePubKeyFile, "a+") as f:
-      f.write(name)
-      f.write(' ')
-      f.write(encodePubKey(pk).decode("utf-8"))
-      f.write('\n')
+      with open(pubKeyPath, "wb") as f:
+          f.write(encodePubKey(pk))
+          f.close
 
-  return (True, pubKeyPath, privKeyPath)
+      with open(storagePubKeyFile, "a+") as f:
+          f.write(" " + name + " " + encodePubKey(pk).decode("utf-8") + '\n')
+          f.close
+	
+      return (True, pubKeyPath, privKeyPath)
 
+  except FileNotFoundError:
+      print("Ha habido un error generando los archivos que contienen las claves. Vuelva a intentarlo.")
 
+#Generates a signature of a file
+#Returns True on success and the signature file path
 def signFile(filePath, privKey):
-  with open(filePath, 'rb') as f:
-      message = f.read()
+  try:
+      with open(filePath, 'rb') as f:
+          message = f.read()
 
-  H = hashToPoint(message)
-  signature = privKey * H
-    
-  signatureFilePath = filePath+".sig"
+      H = hashToPoint(message)
+      signature = privKey * H
 
-  with open(signatureFilePath, "wb") as f:
-      f.write(encodeSig(signature))
+      signatureFilePath = filePath+".sig"
 
-  return (True, signatureFilePath)
+      with open(signatureFilePath, "wb") as f:
+          f.write(encodeSignature(signature))
+	  
+
+      return (True, signatureFilePath)
+
+  except (FileNotFoundError, ValueError):
+      return (False, "")
 
 
+#Checks the signature of a file
+#Returns True if the signature is valid
 def verifySignature(filePath, signatureFilePath, pubKey):
-  with open(filePath, 'rb') as f:
-      message = f.read()
+  try:
+      with open(filePath, 'rb') as f:
+          message = f.read()
 
-  H = hashToPoint(message)
+      H = hashToPoint(message)  
 
-  with open(signatureFilePath, "rb") as f:
-      signature = decodeSig(f.read())
+      with open(signatureFilePath, "rb") as f:
+          signature = decodeSignature(f.read())
+      p1 = pairing(pubKey, H)
+      p2 = pairing(G1, signature)
+      return p1 == p2	
 
-  #print(signature)
-  #print(H)
-  #print(pubKey)
-  p1 = pairing(pubKey, H)
-  p2 = pairing(G1, signature)
-  #print(p1)
-  #print(p2)
-  return p1 == p2
+  except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+  except ValueError:
+      print("Archivo dañado o incorrecto")
 
 
+#Processes the input/output when generating keys
 def auxKeyGenerator():
     name = input("Escriba su nombre: ")
-    if isUser(name):
+    isUserVar = isUser(name)
+    if isUserVar:
       print("Este usuario ya tiene su par de claves")
       return
-    else:
-      myTuple = keyGenerator(name)
-    
-    if myTuple[0]:
-      print("Su clave pública se aloja en: " + myTuple[1])
-      print("Su clave privada se aloja en: " + myTuple[2])
-    else:
-      print("Ha habido un error generando las claves, vuelva a intentarlo.")
-    
-def auxSignFile():
+    elif not isUserVar:
+      myTuple = keyGenerator(name)    
+      if myTuple[0]:
+          print("Su clave pública se aloja en: " + myTuple[1])
+          print("Su clave privada se aloja en: " + myTuple[2])
+      else:
+          print("Ha habido un error generando las claves, vuelva a intentarlo.")
+   
+	
 
+#Processes the input/output when signing a file
+def auxSignFile():
   privKeyPath = input("Escriba la ruta del fichero donde está su clave privada: ")
   filePath = input("Escriba la ruta del fichero que quiere firmar: ")
+  try:
+    fo = open(privKeyPath, "rb")
+    privKey = decodePrivKey(fo.read())
+    fo.close()
 
-  fo = open(privKeyPath, "rb")
-  privKey = decodePrivKey(fo.read())
-  fo.close()
+    myTuple = signFile(filePath, privKey)  
+    if myTuple[0]:
+      print("El documento firmado se encuentra en: " + myTuple[1])
+    else: 
+      print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
+  except FileNotFoundError:
+    print("La ruta no se encuentra")
+  except ValueError:
+    print("Archivo dañado o incorrecto")
 
-  #Se pasa la ruta del fichero a firmar y la clave privada
-  #Devuelve true/false y el path al documento firmado
-  myTuple = signFile(filePath, privKey)
-  
-  if myTuple[0]:
-    print("El documento firmado se encuentra en: " + myTuple[1])
-  else: 
-    print("Ha habido un error firmando el fichero, vuelva a intentarlo.")
-
-
+#Processes the input/output when verifying a signature
 def auxVerifySignature():
   print("Escoja una opción: ")
-  print(" a. Si es usuario del sistema, escriba su nombre.")
+  print(" a. Si el firmante es usuario del sistema, escriba su nombre.")
   print(" b. Si no, escriba la ruta donde se almacena su clave pública.")
   opt = input()
 
-  pubKey = None
-    
+  pubKey = None    
   if opt == "a":
     name = input("Escriba su nombre: ")
-    if isUser(name):
+    isUserVar = isUser(name)
+    if isUserVar:
       fo = open(storagePubKeyFile, "r")
       for line in fo:
         line = line.split()
@@ -199,70 +257,57 @@ def auxVerifySignature():
           pubKey = decodePubKey(line[1].encode("utf-8"))
           break
       
-    else:
+    elif not isUserVar:
       print("Su usuario no existe.")
       return
   
   elif opt == "b":
-    pubKeyPath = input("Escriba la ruta donde se almacena su clave pública: ")
-    fo = open(pubKeyPath, "rb")
-    pubKey = decodePubKey(fo.read())
-    fo.close()
+    pubKeyPath = input("Escriba la ruta donde se almacena la clave pública del firmante: ")
+    try:
+    	fo = open(pubKeyPath, "rb")
+    	pubKey = decodePubKey(fo.read())
+    	fo.close()
+
+    except FileNotFoundError:
+      print("No se ha encontrado el archivo")
+      return
+    except ValueError:
+      print("Archivo dañado o incorrecto")
 
   else:
     print("Opción no válida.")
     return
 
-  signatureFilePath = input("Escriba la ruta de la firma a verificar: ")
-  filePath = input("Escriba la ruta del documento firmado: ")
-
+  signatureFilePath = input("Escriba la ruta de la FIRMA a verificar (el documento .sig): ")
+  filePath = input("Escriba la ruta del DOCUMENTO original que se ha firmado: ")
+  print("Espere por favor, estamos tramitando su petición. Esto puede llevar tiempo")
   if verifySignature(filePath, signatureFilePath, pubKey):
     print("La firma es correcta.")
-  else: 
+  elif False: 
     print("La firma no es correcta.")
 
 
 def main():
   print("Bienvenido al trabajo de CTC sobre curvas elípticas BLS. Se puede: ")
-  while 1:
+  exit = False
+  while not exit:
     opt = menuText()
   
     while opt not in [1,2,3,4]:
-      print("Escoja una opción válida:")
+      print("Por favor, escoja una opción válida.")
       opt = menuText()
   
     if opt == 4:
-        return 0
+        exit = True
     elif opt == 1: #Crear firmas
       auxKeyGenerator()
     elif opt == 2: #Firmar doc
       auxSignFile()
     else: #check firma
       auxVerifySignature()
+    
+    if exit:
+        return 0
 
 if __name__ == "__main__":
     main()
-
-
-
-"""
-
-BLS12_381_FQ2(x=1106624301960789946748158909871646598348904190322609219168378608841911
-898492216282408390352467793829034273514879159u + 1649077438388732385859817655088667066
-245504782517249547359861252662675631490090511138983125185251955676080881775131, y=3110
-81991676779127471721509924076726996932356427740459944270153530893013507119419478228535
-0976196626206342470238723u + 126782964418323818073621591837174637495231035899753538620
-0927214907051033380472497364373776011207985516687964055162)
-BLS12_381_FQ2(x=3463031491276111053437551085715438993401815136204614267126783225805721
-208029984986011411886489382368275818805965886u + 2247212123674941974215108907514019192
-503264191178610072130191523851478075383835910648860198776893009435174021599307, y=5460
-25818131574661406183621952818227207105997402797858208313381207764114675151023623791919
-540747917636939971076970u + 1757145574596997458599070055464714925152652800747649673165
-91478496834057574687082396559401291262307359029450538477)
-BLS12_381_FQ(x=50532783350983116249148232828292763881353770160137954180130858136804971
-1085959338414568906374117041523196126495913, y=984810398263711076044249951760876454249
-073578842065543413124405779036630624916572541688343954209521432468067795003)
-
-
--7141337075487289341
-"""
