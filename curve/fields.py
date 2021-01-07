@@ -3,6 +3,7 @@ from typing import Union, TypeVar, Sequence, Mapping
 #from collections.abc import Sequence, Mapping
 from typing_extensions import Protocol, runtime_checkable
 from functools import total_ordering
+import random
 
 T = TypeVar("T")
 T_Polynomial = TypeVar("T_Polynomial", bound="Polynomial")
@@ -274,6 +275,69 @@ class FQ():
     def __repr__(self: T_FQ) -> str:
         return repr(self.val)
 
+
+    @classmethod
+    def randelem(cls):
+        p = cls.char()
+        q = cls.order()
+        if q != p:
+            coefs = [random.randint(0,p-1) for i in range(cls.modulus.deg)]
+            rho = cls(coefs)
+            if rho == 0:
+                return cls.randelem()
+        else:
+            rho = cls(random.randint(1,q-1))
+        return rho
+
+    def is_quadratic(self) -> bool:
+        return self**((self.order()-1)//2) == 1
+        
+
+    def sqrt(self: T_FQ) -> T_FQ:
+        # Adleman-Manders-Miller
+        p = self.char()
+        q = self.order()
+
+        rho = self.randelem()
+        while rho.is_quadratic():
+            rho = self.randelem()
+
+        s = q-1
+        t = 0
+        while s % 2 == 0:
+            s //= 2
+            t += 1
+
+        a = rho**s
+        b = self**s
+        h = 1
+        for i in range(1,t):
+            d = b**(2**(t-1-i))
+            k = 0 if d == 1 else 1
+            b = b*((a**2)**k)
+            h = h*(a**k)
+            a = a**2
+
+        res = self**((s+1)//2)*h
+        if res**2 != self:
+            return None
+        return sorted([res,-res])
+
+    @classmethod
+    def order(cls) -> int:
+        if hasattr(cls.modulus, "__len__"):
+            return cls.modulus.coef_type.order()**cls.modulus.deg
+        else:
+            return cls.modulus
+
+    @classmethod
+    def char(cls) -> int:
+        if hasattr(cls.modulus, "__len__"):
+            return cls.modulus.coef_type.char()
+        else:
+            return cls.modulus
+
+        
     @classmethod
     def one(cls: type(T_FQ)) -> T_FQ:
         return cls(1)

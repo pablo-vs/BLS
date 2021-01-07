@@ -9,17 +9,20 @@ from curve import (
     BLS12_381_FQ as BaseCurve,
     BLS12_381_FQ2 as ExtCurve
 )
+from curve.encoding import (
+    encodePubKey,
+    decodePubKey,
+    encodePrivKey,
+    decodePrivKey,
+    encodeSignature,
+    decodeSignature,
+    ENDIANNESS
+)
 import random
-import base64
 from hashlib import sha256
-from math import ceil
 
 
 
-PRIVKEY_SIZE = 32
-FQ_SIZE = 48
-PUBKEY_SIZE = 2*FQ_SIZE
-SIGNATURE_SIZE = 4*FQ_SIZE
 
 #File where user's public keys are stored. It works similar to a DB.
 storagePubKeyFile = r"allPublicKeys.txt"
@@ -61,79 +64,13 @@ def isUser(name):
       fo.close()
       return False
 
-# Functions to encode and decode data to base64
-# Improves readability of the files
 
-#Returns the public key encoded in base64
-def encodePubKey(pk):
-    # TODO point compression: the coded version could be shorter 
-    #Instead of storing both x and y, it could be stored just x and then calculate y from the curve equation
-    x, y = pk
-    return base64.b64encode(x.val.to_bytes(FQ_SIZE, byteorder='little')
-            + y.val.to_bytes(FQ_SIZE, byteorder='little'))
-
-#Returns the public key decoded from base64
-def decodePubKey(pkStr):
-    pkStr = pkStr.strip(b' \n')
-    if len(pkStr) > 4*PUBKEY_SIZE/3:
-        raise ValueError("It seems like your public key file is corrupted")
-    byte = base64.b64decode(pkStr)
-    x = FQ(int.from_bytes(byte[:FQ_SIZE], byteorder='little'))
-    y = FQ(int.from_bytes(byte[FQ_SIZE:], byteorder='little'))
-    try:
-        return BaseCurve(x,y)
-    except ValueError as e:
-        raise ValueError("It seems your public key file is corrupted:,", e)
-
-
-#Returns the private key encoded in base64
-def encodePrivKey(sk):
-    return base64.b64encode(sk.to_bytes(PRIVKEY_SIZE, byteorder='little'))
-
-#Returns the private key decoded from base64
-def decodePrivKey(skStr):
-    skStr = skStr.strip(b' \n')
-    if len(skStr) > 4*ceil(PRIVKEY_SIZE/3):
-        raise ValueError("It seems like your private key file is corrupted.")
-    res = int.from_bytes(base64.b64decode(skStr), byteorder='little')
-    if res < 0 or res > curve_order:
-        raise ValueError("It seems like your private key file is corrupted.")
-    return res
-    
-
-#Returns the signature encoded in base64
-def encodeSignature(sig):
-    x, y = sig
-    x0, x1 = x.val[0].val, x.val[1].val
-    y0, y1 = y.val[0].val, y.val[1].val
-    return base64.b64encode(x0.to_bytes(FQ_SIZE, byteorder='little')
-            + x1.to_bytes(FQ_SIZE, byteorder='little')
-            + y0.to_bytes(FQ_SIZE, byteorder='little')
-            + y1.to_bytes(FQ_SIZE, byteorder='little'))
-
-#Returns the signature decoded from base64
-def decodeSignature(sigStr):
-    sigStr = sigStr.strip(b' \n')
-    if len(sigStr) > 4*SIGNATURE_SIZE/3:
-        raise ValueError("It seems like the signature file is corrupted")
-
-    byte = base64.b64decode(sigStr)
-    x0 = int.from_bytes(byte[:FQ_SIZE], byteorder='little')
-    x1 = int.from_bytes(byte[FQ_SIZE:2*FQ_SIZE], byteorder='little')
-    y0 = int.from_bytes(byte[2*FQ_SIZE:3*FQ_SIZE], byteorder='little')
-    y1 = int.from_bytes(byte[3*FQ_SIZE:], byteorder='little')
-    x = FQ2([x0, x1])
-    y = FQ2([y0, y1])
-    try:
-        return ExtCurve(x,y)
-    except ValueError as e:
-        raise ValueError("It seems like the signature file is corrupted:,", e)
 
 #Represents a message as a point which belongs to the eliptic curve
 #Simplified version to make it work quicker
 def hashToPoint(message):
     # TODO secure hashing function
-    hint = int.from_bytes(sha256(message).digest(), byteorder='little')
+    hint = int.from_bytes(sha256(message).digest(), byteorder=ENDIANNESS)
     h = hint % curve_order
     return G2 * h
 
