@@ -1,3 +1,11 @@
+"""
+    Functions to encode and decode data to base64.
+    Improves readability of the files.
+    Implements the ZCash serialization standard, except
+    for the representation of finite field elements:
+    https://tools.ietf.org/html/draft-irtf-cfrg-pairing-friendly-curves-09#appendix-C
+"""
+
 import base64
 from math import ceil
 
@@ -52,12 +60,8 @@ def sign(b):
     return (b & BIT_SIGN) // BIT_SIGN
 
 
-# Functions to encode and decode data to base64
-# Improves readability of the files
-
-#Returns the public key encoded in base64
+# Returns the public key encoded in base64
 def encodePubKey(pk):
-    #print(pk)
     x, y = pk
 
     if pk.is_infinite():
@@ -84,7 +88,7 @@ def encodePubKey(pk):
     tot_bytes = bytes([first_byte]) + x_bytes[1:] + y_bytes
     return base64.b64encode(tot_bytes)
 
-#Returns the public key decoded from base64
+# Returns the public key decoded from base64
 def decodePubKey(pkStr):
     byte = base64.b64decode(pkStr)
 
@@ -113,17 +117,16 @@ def decodePubKey(pkStr):
         y = FQ(int.from_bytes(byte[FQ_SIZE:], byteorder=ENDIANNESS))
 
     try:
-        #print(BaseCurve(x,y))
         return BaseCurve(x,y)
     except ValueError as e:
         raise ValueError("It seems your public key file is corrupted:,", e)
 
 
-#Returns the private key encoded in base64
+# Returns the private key encoded in base64
 def encodePrivKey(sk):
     return base64.b64encode(sk.to_bytes(PRIVKEY_SIZE, byteorder=ENDIANNESS))
 
-#Returns the private key decoded from base64
+# Returns the private key decoded from base64
 def decodePrivKey(skStr):
     byte = base64.b64decode(skStr) 
     if len(byte) != PRIVKEY_SIZE:
@@ -135,9 +138,8 @@ def decodePrivKey(skStr):
     return res
     
 
-#Returns the signature encoded in base64
+# Returns the signature encoded in base64
 def encodeSignature(sig):
-    #print(sig)
     x, y = sig
 
     if sig.is_infinite():
@@ -163,9 +165,6 @@ def encodeSignature(sig):
     else:
         s_bit = sign_F2(y)
 
-    #print(s_bit)
-    #print(sign_F2(y))
-    #print(y)
 
     first_byte = x_bytes[0] + metadata_bits(c_bit, i_bit, s_bit)
 
@@ -174,7 +173,7 @@ def encodeSignature(sig):
 
 
 
-#Returns the signature decoded from base64
+# Returns the signature decoded from base64
 def decodeSignature(sigStr):
     byte = base64.b64decode(sigStr)
 
@@ -205,9 +204,6 @@ def decodeSignature(sigStr):
         else:
             y = ys[1]
 
-        #print(y)
-        #print(sign(metadata))
-        #print(sign_F2(y))
 
     else:
         y0 = int.from_bytes(byte[2*FQ_SIZE:3*FQ_SIZE], byteorder=ENDIANNESS)
@@ -215,7 +211,6 @@ def decodeSignature(sigStr):
         y = FQ2([y0, y1])
 
     try:
-        #print(ExtCurve(x,y))
         return ExtCurve(x,y)
     except ValueError as e:
         raise ValueError("It seems like the signature file is corrupted:,", e)

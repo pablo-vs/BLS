@@ -7,7 +7,7 @@ Point = namedtuple("Point", ['x', 'y'])
 
 class CurvePoint(Point):
 
-    # Parameters: y ** 2 = x ** 3 + ax + b
+    # Curve equation parameters: y ** 2 = x ** 3 + ax + b
     b = None
     a = None
 
@@ -17,7 +17,6 @@ class CurvePoint(Point):
             raise AttributeError("Curve paremeters not set")
         if x is not None and y is None:
             raise NotImplementedError()
-            #y2 = type(x)(sqrt(x**3 + a*x + b))
         self = super(CurvePoint, cls).__new__(cls, x, y)
         return self
 

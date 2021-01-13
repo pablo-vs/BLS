@@ -1,6 +1,10 @@
+"""
+    Arithmetic on finite fields
+"""
+
+
 from abc import ABC, abstractmethod
 from typing import Union, TypeVar, Sequence, Mapping
-#from collections.abc import Sequence, Mapping
 from typing_extensions import Protocol, runtime_checkable
 from functools import total_ordering
 import random
@@ -9,6 +13,12 @@ T = TypeVar("T")
 T_Polynomial = TypeVar("T_Polynomial", bound="Polynomial")
 T_FQ = TypeVar("T_FQ", bound="FQ")
 
+
+"""
+    Interface which all "inner values" of
+    finite field elements (ints, polynomials)
+    must implement
+"""
 @runtime_checkable
 class FQVal(Protocol[T]):
 
@@ -37,6 +47,7 @@ class FQVal(Protocol[T]):
     def __hash__(self: T) -> int: ...
     def __neg__(self: T) -> T: ...
     def __repr__(self: T) -> str: ...
+
 
 
 def isVal(e):
@@ -192,6 +203,9 @@ class Polynomial(ABC, dict, FQVal):
         return ' + '.join(reversed([f"{'' if v == 0 or (v == 1 and i > 0) else repr(v)}{self.var if i > 0 else ''}{print_superscript(i) if i > 1 else ''}" for i,v in sorted(list(self.items())) if v != 0]))
 
 
+"""
+    Factory method for polynomial rings
+"""
 def Polynomials(cls, var = "x"):
     return type(f"Polynomial{cls.__name__}", (Polynomial,), {'coef_type': cls, 'var': var})
 
@@ -199,6 +213,9 @@ def Polynomials(cls, var = "x"):
 
 
 
+"""
+    Class of elements of a finite field
+"""
 @total_ordering
 class FQ():
 
@@ -218,7 +235,6 @@ class FQ():
 
 
     def __add__(self: T_FQ, other: FQOrVal) -> T_FQ:
-        #ot = other if isVal(other) else other.val
         ot = other if isVal(other) else other.val
         return type(self)(self.val + ot)
 
@@ -323,6 +339,7 @@ class FQ():
             return None
         return sorted([res,-res])
 
+
     @classmethod
     def order(cls) -> int:
         if hasattr(cls.modulus, "__len__"):
@@ -355,6 +372,10 @@ class FQ():
 
 
 
+"""
+    Factory method for generating finite fields with
+    a given moduls.
+"""
 def FQFac(mod):
 
     class meta(type):

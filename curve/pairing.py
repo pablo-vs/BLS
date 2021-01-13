@@ -29,27 +29,6 @@ def embed_FQ12(P: Point) -> Point:
     x, y = P
     return type(P)(FQ12(x), FQ12(y))
 
-"""
-# Check consistency of the "line function"
-one, two, three = G1, 2*G1, 3*G1
-negone, negtwo, negthree = (
-    G1*(curve_order - 1),
-    G1*(curve_order - 2),
-    G1*(curve_order - 3),
-)
-
-
-assert linefunc(one, two, one) == 0
-assert linefunc(one, two, two) == 0
-assert linefunc(one, two, three) != 0
-assert linefunc(one, two, negthree) == 0
-assert linefunc(one, negone, one) == 0
-assert linefunc(one, negone, negone) == 0
-assert linefunc(one, negone, two) != 0
-assert linefunc(one, one, one) == 0
-assert linefunc(one, one, two) != 0
-assert linefunc(one, one, negtwo) == 0
-"""
 
 def miller_loop(P: CurvePoint, Q: CurvePoint) -> FQ12:
     if P.is_infinite() or Q.is_infinite():
@@ -64,15 +43,6 @@ def miller_loop(P: CurvePoint, Q: CurvePoint) -> FQ12:
             f = f * linefunc(R, Q, P)
             R = R + Q
 
-    #assert R == multiply(Q, ate_loop_count)
-    #Q1 = (Q[0] ** field_modulus, Q[1] ** field_modulus)
-    #assert is_on_curve(Q1, b12)
-    #nQ2 = (Q1[0] ** field_modulus, -Q1[1] ** field_modulus)
-    #assert is_on_curve(nQ2, b12)
-    #f = f * linefunc(R, Q1, P)
-    #R = add(R, Q1)
-    #f = f * linefunc(R, nQ2, P)
-    #R = add(R, nQ2) This line is in many specifications but it technically does nothing
     return f ** ((field_modulus ** 12 - 1) // curve_order)
 
     
