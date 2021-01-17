@@ -4,6 +4,30 @@
     Implements the ZCash serialization standard, except
     for the representation of finite field elements:
     https://tools.ietf.org/html/draft-irtf-cfrg-pairing-friendly-curves-09#appendix-C
+    
+    "
+        At a high level, the serialization format is defined as follows:
+
+       *  Serialized points include three metadata bits that indicate
+          whether a point is compressed or not, whether a point is the point
+          at infinity or not, and (for compressed points) the sign of the
+          point's y-coordinate.
+
+       *  Points on E are serialized into 48 bytes (compressed) or 96 bytes
+          (uncompressed).  Points on E' are serialized into 96 bytes
+          (compressed) or 192 bytes (uncompressed).
+
+       *  The serialization of a point at infinity comprises a string of
+          zero bytes, except that the metadata bits may be nonzero.
+
+       *  The serialization of a compressed point other than the point at
+          infinity comprises a serialized x-coordinate.
+
+       *  The serialization of an uncompressed point other than the point at
+          infinity comprises a serialized x-coordinate followed by a
+          serialized y-coordinate.
+    "
+    
 """
 
 import base64
