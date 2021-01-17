@@ -5,9 +5,10 @@ from collections import namedtuple
 
 Point = namedtuple("Point", ['x', 'y'])
 
+#Represents an eliptic curve point
 class CurvePoint(Point):
 
-    # Curve equation parameters: y ** 2 = x ** 3 + ax + b
+    # Curve equation parameters: y^2 = x^3 + ax + b
     b = None
     a = None
 
@@ -24,7 +25,7 @@ class CurvePoint(Point):
         if not self.is_on_curve():
             raise ValueError("Point is not in curve")
 
-
+#Infinite for us is Null since we dont use projective coordinates 
     def is_infinite(self):
         return self.x is None
 
@@ -71,7 +72,7 @@ class CurvePoint(Point):
     def __rmul__(self, other: int):
         return self*other
 
-
+#add a point to itself
     def double(self):
         if self.is_infinite():
             return self
@@ -91,6 +92,7 @@ class CurvePoint(Point):
         else:
             return super().__eq__(other)
 
+        #some curves use it, others dont
     #@abstractmethod
     def twist(self):
         raise NotImplementedError()
