@@ -21,24 +21,32 @@ from curve import (
 #### Encoding properties ####
 
 ENDIANNESS = 'big'
+#7th bit of the first byte
 BIT_COMPRESSED = 1<<7
 BIT_INF = 1<<6
 BIT_SIGN = 1<<5
 
+#set to falso if you dont want to use compression
 POINT_COMPRESSION = True
 
+#its not a curve point, just an integer
 PRIVKEY_SIZE = 32
+#size of FQ element
 FQ_SIZE = 48
 
+#size depends on if compression is enabled or not
 def PUBKEY_SIZE(comp):
     return FQ_SIZE*(1 if comp else 2)
 
 def SIGNATURE_SIZE(comp):
     return 2*FQ_SIZE*(1 if comp else 2)
 
+#return the sign of a FQ point
 def sign_F(e):
     return 1 if e.val > (F.order()-1)//2 else 0
 
+
+#return the sign of a FQ2 point
 def sign_F2(e):
     if e.val[1] == 0:
         return sign_F(e.val[0])
@@ -47,6 +55,7 @@ def sign_F2(e):
     else:
         return 0
 
+#build metadata bits from its value (compression, infinite, sign)
 def metadata_bits(c,i,s):
     return c*BIT_COMPRESSED + i*BIT_INF + s*BIT_SIGN
 
