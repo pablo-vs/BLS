@@ -4,7 +4,7 @@
     Implements the ZCash serialization standard, except
     for the representation of finite field elements:
     https://tools.ietf.org/html/draft-irtf-cfrg-pairing-friendly-curves-09#appendix-C
-    
+
     "
         At a high level, the serialization format is defined as follows:
 
@@ -27,11 +27,10 @@
           infinity comprises a serialized x-coordinate followed by a
           serialized y-coordinate.
     "
-    
+
 """
 
 import base64
-from math import ceil
 
 from curve import (
     curve_order,
@@ -67,7 +66,7 @@ def SIGNATURE_SIZE(comp):
 
 #return the sign of a FQ point
 def sign_F(e):
-    return 1 if e.val > (F.order()-1)//2 else 0
+    return 1 if e.val > (FQ.order()-1)//2 else 0
 
 
 #return the sign of a FQ2 point
@@ -111,7 +110,7 @@ def encodePubKey(pk):
 
     c_bit = 1 if POINT_COMPRESSION else 0
     i_bit = 1 if pk.is_infinite() else 0
-    if c_bit*i_bit == 0:
+    if c_bit == 0 or i_bit == 1:
         s_bit = 0
     else:
         s_bit = sign_F(y)
@@ -125,17 +124,17 @@ def encodePubKey(pk):
 def decodePubKey(pkStr):
     byte = base64.b64decode(pkStr)
 
-    if len(byte) < 1:
+    if len(byte) < 2:
         raise ValueError("It seems like your public key file is corrupted")
 
     metadata = byte[0]
-    if is_inf(metadata):
-        return BaseCurve()
-
     byte = bytes([byte[0] & ((1<<5)-1)]) + byte[1:]
 
     if len(byte) != PUBKEY_SIZE(is_comp(metadata)):
         raise ValueError("It seems like your public key file is corrupted")
+
+    if is_inf(metadata):
+        return BaseCurve()
 
     if is_comp(metadata):
         x = FQ(int.from_bytes(byte, byteorder=ENDIANNESS))
@@ -169,7 +168,7 @@ def decodePrivKey(skStr):
     if res < 0 or res > curve_order:
         raise ValueError("It seems like your private key file is corrupted.")
     return res
-    
+
 
 # Returns the signature encoded in base64
 def encodeSignature(sig):
@@ -210,18 +209,17 @@ def encodeSignature(sig):
 def decodeSignature(sigStr):
     byte = base64.b64decode(sigStr)
 
-    if len(byte) < 1:
+    if len(byte) < 2:
         raise ValueError("It seems like the signature file is corrupted")
 
     metadata = byte[0]
-    if is_inf(metadata):
-        # TODO check error
-        return ExtCurve()
-
     byte = bytes([byte[0] & ((1<<5)-1)]) + byte[1:]
 
     if len(byte) != SIGNATURE_SIZE(is_comp(metadata)):
         raise ValueError("It seems like the signature file is corrupted")
+
+    if is_inf(metadata):
+        return ExtCurve()
 
     x0 = int.from_bytes(byte[:FQ_SIZE], byteorder=ENDIANNESS)
     x1 = int.from_bytes(byte[FQ_SIZE:2*FQ_SIZE], byteorder=ENDIANNESS)
